@@ -108,20 +108,53 @@ class Home extends BaseController
         $siasnService   = new Siasn();
         $accessTokenSso = $siasnService->getTokenSso();
         $accessTokenWso = $siasnService->getTokenWso();
-
         $client = new Client();
+
         $headers = [
-            'accept'        => 'application/json',
             'Auth'          => 'bearer ' . $accessTokenSso,
             'Authorization' => 'Bearer ' . $accessTokenWso,
+            'accept'        => 'application/json',
             'Content-Type'  => 'application/json',
             'read_timeout'  => 100000,
         ];
-            $nip     = '199507162024211013';
-            $request = new Request('GET', 'https://apimws.bkn.go.id:8243/apisiasn/1.0/pns/data-utama/' . $nip, $headers);
+
+        $loop = $this->sipgan->table('testingekinerja')->get()->getResultArray();
+        //dd($loop);
+
+        foreach ($loop as $row) :
+            $eselon = $row["eselonId"] == null ? "null" : '"' . $row["eselonId"] . '"';
+            $jft    = $row["jabatanFungsionalId"] == null ? "null" : '"' . $row["jabatanFungsionalId"] . '"';
+            $jfu    = $row["jabatanFungsionalUmumId"] == null ? "null" : '"' . $row["jabatanFungsionalUmumId"] . '"';
+
+            $body = '{
+                "eselonId":' . $eselon . ',
+                "id":"' . $row["idRwyt"] . '",
+                "instansiId":"' . $row["instansiId"] . '",
+                "satuanKerjaId":"' . $row["satuanKerjaId"] . '",
+                "jabatanFungsionalId":' . $jft . ',
+                "jabatanFungsionalUmumId":' . $jfu . ',
+                "jenisJabatan":"' . $row["jenisJabatan"] . '",
+                "subJabatanId":"' . $row["subJabatanId"] . '",
+                "tanggalSk":"' . $row["tanggalSk"] . '",
+                "tmtJabatan":"' . $row["tmtJabatan"] . '",
+                "tmtMutasi":"' . $row["tmtMutasi"] . '",
+                "tmtPelantikan":"' . $row["tmtPelantikan"] . '",
+                "nomorSk":"' . $row["nomorSk"] . '",
+                "jenisMutasiId":"' . $row["jenisMutasiId"] . '",
+                "jenisPenugasanId":"' . $row["jenisPenugasanId"] . '",
+                "path":[],
+                "pnsId":"' . $row["pnsId"] . '",
+                "unorId":"' . $row["unorId"] . '",
+            }';
+
+            $request = new Request('POST', 'https://apimws.bkn.go.id:8243/apisiasn/1.0/jabatan/unorjabatan/save', $headers, $body);
             $res     = $client->sendAsync($request)->wait();
-            $res    = json_decode($res->getBody()->getContents(), TRUE);
-            $dump   = $res['data'];
-            dd($dump);
+            $statuscode = $res->getStatusCode();
+            $response   = $res->getReasonPhrase();
+
+            //simpan hasil ke database
+            $update  = "UPDATE disparitas_unorjabatan SET response='" . $response . "', statuscode='" . $statuscode . "' WHERE nip='" . $row['nip'] . "'";
+            $this->sipgan->query($update);
+        endforeach;
     }
 }

@@ -34,7 +34,7 @@ CI_ENVIRONMENT = development
 
 #--------------------------------------------------------------------
 
-app.baseURL = 'http://localhost/ekspor/public'
+app.baseURL = 'http://localhost/ekspor'
 
 # If you have trouble with `.`, you could also use `_`.
 
